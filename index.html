@@ -1,230 +1,167 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Temp Mail BOX</title>
+<title>Temp Mail Box</title>
 
 <style>
-*{box-sizing:border-box;font-family:Arial}
 body{
   margin:0;
   padding:20px;
+  font-family:Arial;
   background:linear-gradient(135deg,#4c1d95,#6d28d9,#7c3aed);
   color:white;
 }
-h1{text-align:center}
-
 .container{
   max-width:700px;
   margin:auto;
   background:rgba(255,255,255,.12);
   padding:20px;
-  border-radius:16px;
+  border-radius:14px;
 }
-
 button,input{
   padding:12px;
   border:none;
   border-radius:10px;
   font-weight:bold;
 }
+.generate{width:100%;background:#0ea5e9;color:white;}
+.check{width:100%;margin-top:10px;background:#f59e0b;color:white;}
+.email-box{display:flex;gap:8px;margin-top:10px;}
+.email-box input{flex:1;background:white;color:black;}
+.copy{background:#22c55e;color:white;}
 
-.generate{
-  width:100%;
-  background:#0ea5e9;
-  color:white;
-  margin-top:10px;
-  cursor:pointer;
-}
-
-.email-box{
-  display:flex;
-  gap:8px;
-  margin-top:10px;
-}
-.email-box input{
-  flex:1;
-  background:white;
-  color:black;
-}
-
-.copy{background:#22c55e;color:white;cursor:pointer}
-.check{width:100%;margin-top:10px;background:#f59e0b;color:white;cursor:pointer}
-
-/* tabs */
-.tabs{
-  display:flex;
-  gap:8px;
-  margin-top:15px;
-  overflow:auto;
-}
-.tab{
-  background:rgba(255,255,255,.2);
-  padding:8px 12px;
-  border-radius:10px;
-  cursor:pointer;
-  white-space:nowrap;
-}
-.tab.active{background:#22c55e}
-
-/* inbox */
 .inbox{
   margin-top:15px;
   background:#0b1220;
-  border-radius:12px;
-  padding:12px;
-  min-height:170px;
+  border-radius:10px;
+  padding:10px;
+  min-height:180px;
 }
-
 .mail{
   background:#1e293b;
   padding:10px;
-  border-radius:10px;
+  border-radius:8px;
   margin-bottom:8px;
 }
-
-.empty{
-  text-align:center;
-  opacity:.6;
-  margin-top:40px;
+.code{
+  background:#22c55e;
+  color:black;
+  padding:3px 8px;
+  border-radius:6px;
+  font-weight:bold;
 }
 </style>
 </head>
-<body>
 
-<h1>📩 TEMP MAIL BOX</h1>
+<body>
 
 <div class="container">
 
   <button class="generate" onclick="generateEmail()">⚡ Generate Email</button>
 
   <div class="email-box">
-    <input id="emailField" readonly placeholder="Generated email appears here">
+    <input id="emailField" readonly placeholder="Generated email">
     <button class="copy" onclick="copyEmail()">COPY</button>
   </div>
 
   <button class="check" onclick="checkInbox()">📥 CHECK INBOX</button>
 
-  <!-- tabs -->
-  <div class="tabs" id="tabs"></div>
-
-  <!-- inbox -->
   <div class="inbox" id="inbox">
-    <div class="empty">Inbox is empty</div>
+    Waiting for messages...
   </div>
 
 </div>
 
 <script>
-let inboxes = {};
 let activeEmail = null;
 
-const domains = [
-  "1secmail.com",
-  "1secmail.net",
-  "1secmail.org"
-];
+const domains = ["1secmail.com","1secmail.net","1secmail.org"];
 
 function rand(len){
   const chars="abcdefghijklmnopqrstuvwxyz0123456789";
-  let out="";
-  for(let i=0;i<len;i++){
-    out += chars[Math.floor(Math.random()*chars.length)];
-  }
-  return out;
+  let r="";
+  for(let i=0;i<len;i++)
+    r+=chars[Math.floor(Math.random()*chars.length)];
+  return r;
 }
 
-/* GENERATE REAL TEMP MAIL */
 function generateEmail(){
   const login = rand(10);
   const domain = domains[Math.floor(Math.random()*domains.length)];
-  const email = login + "@" + domain;
+  activeEmail = `${login}@${domain}`;
 
-  document.getElementById("emailField").value = email;
-
-  inboxes[email] = [];
-  activeEmail = email;
-
-  renderTabs();
-  renderInbox();
+  document.getElementById("emailField").value = activeEmail;
+  document.getElementById("inbox").innerHTML = "No messages yet.";
 }
 
-/* COPY EMAIL */
 function copyEmail(){
-  const f = document.getElementById("emailField");
-  if(!f.value) return alert("Generate email first");
+  const f=document.getElementById("emailField");
   navigator.clipboard.writeText(f.value);
   alert("Copied!");
 }
 
-/* TABS */
-function renderTabs(){
-  const tabs = document.getElementById("tabs");
-  tabs.innerHTML = "";
-
-  Object.keys(inboxes).forEach(email=>{
-    const t = document.createElement("div");
-    t.className = "tab" + (email===activeEmail ? " active":"");
-    t.innerText = email;
-
-    t.onclick = ()=>{
-      activeEmail = email;
-      renderTabs();
-      renderInbox();
-    };
-
-    tabs.appendChild(t);
-  });
-}
-
-/* CHECK INBOX BUTTON (REAL API) */
+/* CHECK REAL INBOX */
 async function checkInbox(){
+
   if(!activeEmail){
     alert("Generate email first.");
     return;
   }
 
-  const [login,domain] = activeEmail.split("@");
+  const [login,domain]=activeEmail.split("@");
+
+  const box=document.getElementById("inbox");
+  box.innerHTML="Checking inbox...";
 
   try{
-    const res = await fetch(
+    // 1️⃣ get messages list
+    const listRes = await fetch(
       `https://www.1secmail.com/api/v1/?action=getMessages&login=${login}&domain=${domain}`
     );
 
-    const mails = await res.json();
+    const mails = await listRes.json();
 
-    inboxes[activeEmail] = mails;
-    renderInbox();
+    if(mails.length===0){
+      box.innerHTML="No messages yet.";
+      return;
+    }
 
-  }catch(err){
-    alert("Failed to check inbox.");
-    console.log(err);
+    box.innerHTML="";
+
+    // 2️⃣ read each mail content
+    for(const m of mails){
+
+      const readRes = await fetch(
+        `https://www.1secmail.com/api/v1/?action=readMessage&login=${login}&domain=${domain}&id=${m.id}`
+      );
+
+      const data = await readRes.json();
+
+      // OTP detector (4-8 digit codes)
+      const codeMatch =
+        (data.body || "").match(/\b\d{4,8}\b/);
+
+      const codeHTML = codeMatch
+        ? `<br>OTP: <span class="code">${codeMatch[0]}</span>`
+        : "";
+
+      const div=document.createElement("div");
+      div.className="mail";
+      div.innerHTML = `
+        <b>From:</b> ${data.from}<br>
+        <b>Subject:</b> ${data.subject}<br>
+        ${codeHTML}
+      `;
+
+      box.appendChild(div);
+    }
+
+  }catch(e){
+    box.innerHTML = "❌ Failed to check inbox.";
+    console.log(e);
   }
-}
-
-/* SHOW INBOX */
-function renderInbox(){
-  const box = document.getElementById("inbox");
-  box.innerHTML = "";
-
-  const mails = inboxes[activeEmail];
-
-  if(!mails || mails.length===0){
-    box.innerHTML = '<div class="empty">No messages yet… click CHECK INBOX</div>';
-    return;
-  }
-
-  mails.forEach(m=>{
-    const div = document.createElement("div");
-    div.className = "mail";
-    div.innerHTML = `
-      <b>From:</b> ${m.from}<br>
-      <b>Subject:</b> ${m.subject}<br>
-      <small>ID: ${m.id}</small>
-    `;
-    box.appendChild(div);
-  });
 }
 </script>
 
