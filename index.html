@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Temporary Mail BOX</title>
+<title>Temp Mail BOX</title>
 
 <style>
 *{box-sizing:border-box;font-family:Arial}
@@ -14,6 +14,7 @@ body{
   color:white;
 }
 h1{text-align:center}
+
 .container{
   max-width:700px;
   margin:auto;
@@ -21,17 +22,43 @@ h1{text-align:center}
   padding:20px;
   border-radius:16px;
 }
+
 button,input{
   padding:12px;
   border:none;
   border-radius:10px;
+  font-weight:bold;
 }
-.generate{width:100%;background:#0ea5e9;color:white;margin-top:10px}
-.email-box{display:flex;gap:8px;margin-top:10px}
-.email-box input{flex:1;background:white;color:black}
-.copy{background:#22c55e;color:white}
 
-.tabs{display:flex;gap:8px;margin-top:15px;overflow:auto}
+.generate{
+  width:100%;
+  background:#0ea5e9;
+  color:white;
+  margin-top:10px;
+  cursor:pointer;
+}
+
+.email-box{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+}
+.email-box input{
+  flex:1;
+  background:white;
+  color:black;
+}
+
+.copy{background:#22c55e;color:white;cursor:pointer}
+.check{width:100%;margin-top:10px;background:#f59e0b;color:white;cursor:pointer}
+
+/* tabs */
+.tabs{
+  display:flex;
+  gap:8px;
+  margin-top:15px;
+  overflow:auto;
+}
 .tab{
   background:rgba(255,255,255,.2);
   padding:8px 12px;
@@ -41,20 +68,27 @@ button,input{
 }
 .tab.active{background:#22c55e}
 
+/* inbox */
 .inbox{
   margin-top:15px;
   background:#0b1220;
   border-radius:12px;
   padding:12px;
-  min-height:160px;
+  min-height:170px;
 }
+
 .mail{
   background:#1e293b;
   padding:10px;
   border-radius:10px;
   margin-bottom:8px;
 }
-.empty{text-align:center;opacity:.6;margin-top:40px}
+
+.empty{
+  text-align:center;
+  opacity:.6;
+  margin-top:40px;
+}
 </style>
 </head>
 <body>
@@ -66,12 +100,16 @@ button,input{
   <button class="generate" onclick="generateEmail()">⚡ Generate Email</button>
 
   <div class="email-box">
-    <input id="emailField" readonly placeholder="Generated email">
+    <input id="emailField" readonly placeholder="Generated email appears here">
     <button class="copy" onclick="copyEmail()">COPY</button>
   </div>
 
+  <button class="check" onclick="checkInbox()">📥 CHECK INBOX</button>
+
+  <!-- tabs -->
   <div class="tabs" id="tabs"></div>
 
+  <!-- inbox -->
   <div class="inbox" id="inbox">
     <div class="empty">Inbox is empty</div>
   </div>
@@ -81,7 +119,6 @@ button,input{
 <script>
 let inboxes = {};
 let activeEmail = null;
-let intervalId = null;
 
 const domains = [
   "1secmail.com",
@@ -90,62 +127,65 @@ const domains = [
 ];
 
 function rand(len){
-  const c="abcdefghijklmnopqrstuvwxyz0123456789";
-  let r="";
-  for(let i=0;i<len;i++) r+=c[Math.floor(Math.random()*c.length)];
-  return r;
+  const chars="abcdefghijklmnopqrstuvwxyz0123456789";
+  let out="";
+  for(let i=0;i<len;i++){
+    out += chars[Math.floor(Math.random()*chars.length)];
+  }
+  return out;
 }
 
-/* GENERATE REAL EMAIL */
+/* GENERATE REAL TEMP MAIL */
 function generateEmail(){
   const login = rand(10);
   const domain = domains[Math.floor(Math.random()*domains.length)];
-  const email = login+"@"+domain;
+  const email = login + "@" + domain;
 
-  document.getElementById("emailField").value=email;
+  document.getElementById("emailField").value = email;
 
-  if(!inboxes[email]) inboxes[email]=[];
+  inboxes[email] = [];
+  activeEmail = email;
 
-  activeEmail=email;
   renderTabs();
-  loadInbox();
-
-  // auto check inbox every 5 sec
-  if(intervalId) clearInterval(intervalId);
-  intervalId=setInterval(loadInbox,5000);
+  renderInbox();
 }
 
-/* COPY */
+/* COPY EMAIL */
 function copyEmail(){
-  const f=document.getElementById("emailField");
-  if(!f.value) return;
+  const f = document.getElementById("emailField");
+  if(!f.value) return alert("Generate email first");
   navigator.clipboard.writeText(f.value);
   alert("Copied!");
 }
 
 /* TABS */
 function renderTabs(){
-  const tabs=document.getElementById("tabs");
-  tabs.innerHTML="";
+  const tabs = document.getElementById("tabs");
+  tabs.innerHTML = "";
+
   Object.keys(inboxes).forEach(email=>{
-    const t=document.createElement("div");
-    t.className="tab"+(email===activeEmail?" active":"");
-    t.innerText=email;
-    t.onclick=()=>{
-      activeEmail=email;
+    const t = document.createElement("div");
+    t.className = "tab" + (email===activeEmail ? " active":"");
+    t.innerText = email;
+
+    t.onclick = ()=>{
+      activeEmail = email;
       renderTabs();
       renderInbox();
-      loadInbox();
     };
+
     tabs.appendChild(t);
   });
 }
 
-/* LOAD REAL INBOX */
-async function loadInbox(){
-  if(!activeEmail) return;
+/* CHECK INBOX BUTTON (REAL API) */
+async function checkInbox(){
+  if(!activeEmail){
+    alert("Generate email first.");
+    return;
+  }
 
-  const [login,domain]=activeEmail.split("@");
+  const [login,domain] = activeEmail.split("@");
 
   try{
     const res = await fetch(
@@ -153,30 +193,32 @@ async function loadInbox(){
     );
 
     const mails = await res.json();
-    inboxes[activeEmail]=mails;
+
+    inboxes[activeEmail] = mails;
     renderInbox();
 
-  }catch(e){
-    console.log(e);
+  }catch(err){
+    alert("Failed to check inbox.");
+    console.log(err);
   }
 }
 
 /* SHOW INBOX */
 function renderInbox(){
-  const box=document.getElementById("inbox");
-  box.innerHTML="";
+  const box = document.getElementById("inbox");
+  box.innerHTML = "";
 
-  const mails=inboxes[activeEmail];
+  const mails = inboxes[activeEmail];
 
   if(!mails || mails.length===0){
-    box.innerHTML='<div class="empty">No messages yet…</div>';
+    box.innerHTML = '<div class="empty">No messages yet… click CHECK INBOX</div>';
     return;
   }
 
   mails.forEach(m=>{
-    const div=document.createElement("div");
-    div.className="mail";
-    div.innerHTML=`
+    const div = document.createElement("div");
+    div.className = "mail";
+    div.innerHTML = `
       <b>From:</b> ${m.from}<br>
       <b>Subject:</b> ${m.subject}<br>
       <small>ID: ${m.id}</small>
