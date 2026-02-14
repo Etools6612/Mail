@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Temporary Mail BOX PRO</title>
-
+<title>Temporary Mail BOX</title>
 <style>
 *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
 
@@ -28,7 +27,6 @@ h1{text-align:center;font-weight:900;margin-bottom:5px}
   border-radius:20px;
 }
 
-/* controls */
 select,button,input{
   width:100%;
   padding:12px;
@@ -43,25 +41,16 @@ select{background:#fff;color:#000}
 .email-box{display:flex;gap:8px;margin-top:10px}
 .email-box input{
   flex:1;
-  background:#fff;
-  color:#000;
-  font-weight:bold;
+  background:#fff;color:#000;font-weight:bold;
 }
 .copy-btn{
   width:110px;
-  background:#22c55e;
-  color:white;
-  font-weight:bold;
-  cursor:pointer;
+  background:#22c55e;color:white;font-weight:bold;cursor:pointer;
 }
 
 /* tabs */
 .tabs{
-  display:flex;
-  gap:8px;
-  overflow-x:auto;
-  margin-top:18px;
-  padding-bottom:4px;
+  display:flex;gap:8px;overflow-x:auto;margin-top:18px;padding-bottom:4px;
 }
 .tab{
   background:rgba(255,255,255,.2);
@@ -89,12 +78,6 @@ select{background:#fff;color:#000}
   margin-bottom:8px;
   padding:10px;
   border-radius:10px;
-  opacity:0;
-  transform:translateY(-15px);
-  animation:slideIn .4s forwards;
-}
-@keyframes slideIn{
-  to{opacity:1;transform:translateY(0)}
 }
 .empty{text-align:center;opacity:.6;margin-top:40px}
 
@@ -111,11 +94,10 @@ select{background:#fff;color:#000}
 .log{font-size:12px;opacity:.85;margin-bottom:4px}
 </style>
 </head>
-
 <body>
 
 <h1>📩 TEMPORARY MAIL BOX</h1>
-<div class="hint">Generate • Copy • Multi Inbox • Live Incoming Mail</div>
+<div class="hint">Generate • Copy • Multi Inbox</div>
 
 <div class="container">
 
@@ -153,7 +135,6 @@ select{background:#fff;color:#000}
 let inboxes = {};
 let activeEmail = null;
 
-/* utils */
 function rand(len){
   const chars="abcdefghijklmnopqrstuvwxyz0123456789";
   let out="";
@@ -161,7 +142,6 @@ function rand(len){
   return out;
 }
 
-/* admin logs */
 function log(msg){
   const logs=document.getElementById("logs");
   const d=document.createElement("div");
@@ -170,7 +150,6 @@ function log(msg){
   logs.prepend(d);
 }
 
-/* generate email */
 function generateEmail(){
   const domain=document.getElementById("provider").value;
   const email=rand(10)+"@"+domain;
@@ -179,7 +158,6 @@ function generateEmail(){
 
   if(!inboxes[email]){
     inboxes[email]=[];
-    startInboxListener(email);
     log("Generated: "+email);
   }
 
@@ -188,7 +166,6 @@ function generateEmail(){
   renderInbox();
 }
 
-/* copy */
 function copyEmail(){
   const field=document.getElementById("emailField");
   if(!field.value) return alert("Generate email first");
@@ -196,7 +173,6 @@ function copyEmail(){
   alert("Copied!");
 }
 
-/* tabs */
 function renderTabs(){
   const tabs=document.getElementById("tabs");
   tabs.innerHTML="";
@@ -213,7 +189,6 @@ function renderTabs(){
   });
 }
 
-/* inbox render */
 function renderInbox(){
   const box=document.getElementById("inbox");
   box.innerHTML="";
@@ -231,38 +206,12 @@ function renderInbox(){
   });
 }
 
-/* LIVE MAIL LISTENER */
-/* -------- REAL API READY --------
-Replace inside this interval with REAL API fetch:
-
-fetch("YOUR_API_ENDPOINT/"+email)
-  .then(r=>r.json())
-  .then(data=>{
-      // push new mails to inboxes[email]
-  })
-
------------------------------------*/
-function startInboxListener(email){
-
-  setInterval(()=>{
-
-    // SIMULATED INCOMING MAIL (LIVE ANIMATION)
-    const code=Math.floor(100000+Math.random()*900000);
-
-    const mail=`📧 New message<br>
-    <small>From: system@${email.split('@')[1]}</small><br>
-    Verification code: <b>${code}</b>`;
-
-    inboxes[email].unshift(mail);
-
-    if(inboxes[email].length>20)
-      inboxes[email].pop();
-
-    if(activeEmail===email) renderInbox();
-
-    log("Incoming mail for "+email);
-
-  },4000 + Math.random()*3000);
+// OPTIONAL: Function to manually add mail (replace with real API fetch later)
+function addMail(email, content){
+  if(!inboxes[email]) inboxes[email]=[];
+  inboxes[email].push(content);
+  if(activeEmail===email) renderInbox();
+  log("Mail added to "+email);
 }
 </script>
 
