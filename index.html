@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cyber TempMail PRO</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    color:white;
+    background:black;
+    overflow-x:hidden;
+}
+
+/* Animated Gradient Background */
+.bg{
+    position:fixed;
+    width:100%;
+    height:100%;
+    z-index:-1;
+    background:linear-gradient(270deg,#00c6ff,#0072ff,#8e2de2,#ff0080);
+    background-size:800% 800%;
+    animation:gradient 12s ease infinite;
+}
+@keyframes gradient{
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
+}
+
+.container{
+    max-width:650px;
+    margin:25px auto;
+    background:rgba(0,0,0,.65);
+    padding:20px;
+    border-radius:16px;
+    backdrop-filter:blur(8px);
+    box-shadow:0 0 20px rgba(0,255,255,.3);
+}
+
+h1,h3{
+    text-align:center;
+}
+
+select,button{
+    width:100%;
+    padding:12px;
+    margin:6px 0;
+    border:none;
+    border-radius:10px;
+    font-size:15px;
+}
+
+button{
+    background:#00e676;
+    font-weight:bold;
+    cursor:pointer;
+}
+button:hover{opacity:.9;}
+
+.copy{
+    background:#2196f3;
+}
+
+.email-box{
+    background:#111;
+    padding:12px;
+    border-radius:10px;
+    margin-top:8px;
+    word-break:break-all;
+    border:1px solid #333;
+}
+
+.mail{
+    background:#1b1b1b;
+    margin:6px 0;
+    padding:10px;
+    border-radius:8px;
+    border-left:3px solid #00e5ff;
+}
+
+.small{
+    font-size:13px;
+    opacity:.8;
+}
+</style>
+</head>
+<body>
+
+<div class="bg"></div>
+
+<div class="container">
+    <h1>📧 Cyber TempMail PRO</h1>
+
+    <label>Select Domain</label>
+    <select id="domainSelect"></select>
+
+    <button onclick="generateEmail()">Generate Temp Email</button>
+
+    <div class="email-box" id="emailBox">No email generated yet...</div>
+    <button class="copy" onclick="copyEmail()">Copy Email</button>
+
+    <h3>📥 Inbox (Auto Refresh)</h3>
+    <div id="inbox">
+        <div class="mail">Inbox empty...</div>
+    </div>
+
+    <h3>🗑 Disposable Inbox List</h3>
+    <div id="history"></div>
+
+    <hr>
+
+    <h3>⚙ Admin Panel (Demo)</h3>
+    <div id="adminPanel" class="mail"></div>
+</div>
+
+<script>
+const API = "https://api.mail.tm";
+
+let token = null;
+let currentEmail = null;
+const currentPass = "temp123456";
+let inboxInterval = null;
+
+/* ===== LOAD DOMAINS ===== */
+async function loadDomains(){
+    const res = await fetch(API + "/domains");
+    const data = await res.json();
+
+    const select = document.getElementById("domainSelect");
+    select.innerHTML="";
+
+    data["hydra:member"].forEach(d=>{
+        let opt=document.createElement("option");
+        opt.value=d.domain;
+        opt.textContent=d.domain;
+        select.appendChild(opt);
+    });
+}
+
+/* ===== GENERATE EMAIL ===== */
+async function generateEmail(){
+    const domain=document.getElementById("domainSelect").value;
+    const username=Math.random().toString(36).substring(2,10);
+
+    currentEmail = `${username}@${domain}`;
+
+    // create account
+    await fetch(API+"/accounts",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            address:currentEmail,
+            password:currentPass
+        })
+    });
+
+    document.getElementById("emailBox").innerText=currentEmail;
+
+    // login
+    const login=await fetch(API+"/token",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            address:currentEmail,
+            password:currentPass
+        })
+    });
+
+    const data=await login.json();
+    token=data.token;
+
+    saveHistory(currentEmail);
+    updateAdmin();
+
+    if(inboxInterval) clearInterval(inboxInterval);
+
+    loadInbox();
+    inboxInterval=setInterval(loadInbox,5000);
+}
+
+/* ===== LOAD INBOX (AUTO REFRESH) ===== */
+async function loadInbox(){
+    if(!token) return;
+
+    const res=await fetch(API+"/messages",{
+        headers:{Authorization:`Bearer ${token}`}
+    });
+
+    const data=await res.json();
+    const inbox=document.getElementById("inbox");
+    inbox.innerHTML="";
+
+    if(data["hydra:member"].length===0){
+        inbox.innerHTML="<div class='mail'>No messages yet...</div>";
+        return;
+    }
+
+    data["hydra:member"].forEach(m=>{
+        inbox.innerHTML += `
+            <div class="mail">
+                <b>From:</b> ${m.from.address}<br>
+                <b>Subject:</b> ${m.subject}<br>
+                <span class="small">${m.intro || ""}</span>
+            </div>
+        `;
+    });
+}
+
+/* ===== COPY EMAIL ===== */
+function copyEmail(){
+    if(!currentEmail) return alert("Generate email first!");
+    navigator.clipboard.writeText(currentEmail);
+    alert("Copied!");
+}
+
+/* ===== DISPOSABLE HISTORY ===== */
+function saveHistory(email){
+    let list=JSON.parse(localStorage.getItem("inboxes") || "[]");
+    list.unshift(email);
+    list=list.slice(0,10);
+    localStorage.setItem("inboxes",JSON.stringify(list));
+    showHistory();
+}
+
+function showHistory(){
+    let list=JSON.parse(localStorage.getItem("inboxes") || "[]");
+    document.getElementById("history").innerHTML =
+        list.map(e=>`<div class="mail">${e}</div>`).join("");
+}
+
+/* ===== ADMIN PANEL (DEMO) ===== */
+function updateAdmin(){
+    let list=JSON.parse(localStorage.getItem("inboxes") || "[]");
+
+    document.getElementById("adminPanel").innerHTML = `
+        Total generated inboxes: <b>${list.length}</b><br>
+        Auto-refresh: <b>ON (5s)</b><br>
+        Current active inbox: <b>${currentEmail || "None"}</b>
+    `;
+}
+
+/* ===== START ===== */
+loadDomains();
+showHistory();
+updateAdmin();
+</script>
+
+</body>
+</html>
